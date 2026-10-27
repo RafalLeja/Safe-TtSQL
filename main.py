@@ -8,6 +8,11 @@ load_dotenv()
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
+# TODO:
+# 1. Połączyć model z bazą
+# 2. Wymyślić 3 przykładowe zapytania do bazy danych
+# 3. (opcjonalnie) Walidacja wygenerowanego SQL-a
+
 
 def main():
     conn_string = (
@@ -27,7 +32,9 @@ def main():
 
     counts = {}
     for table_name in table_names:
-        cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
+        cursor.execute(
+            sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name))
+        )
         counts[table_name] = cursor.fetchone()[0]
 
     pprint.pprint(counts)
