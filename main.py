@@ -1,4 +1,5 @@
 import psycopg
+from psycopg import sql
 import pprint
 import os
 from dotenv import load_dotenv
@@ -14,9 +15,22 @@ def main():
     )
     conn = psycopg.connect(conn_string)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM customers")
-    records = cursor.fetchall()
-    pprint.pprint(records)
+    cursor.execute(
+        """
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+        """
+    )
+    table_names = [row[0] for row in cursor.fetchall()]
+
+    counts = {}
+    for table_name in table_names:
+        cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
+        counts[table_name] = cursor.fetchone()[0]
+
+    pprint.pprint(counts)
 
 
 if __name__ == "__main__":
