@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_openai import ChatOpenAI
-from langchain import hub
-from langchain.agents import create_react_agent
+from langchain.agents import create_agent
 
 load_dotenv()
 DB_USER = os.getenv("DB_USER")
@@ -46,25 +45,37 @@ def main():
     pprint.pprint(counts)
 
 def ai_agent():
-    db_uri = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@localhost:5432/northwind"
+    db_uri = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@localhost:5432/northwind"
     db = SQLDatabase.from_uri(db_uri)
 
     llm = ChatOpenAI(
         base_url="https://services.clarin-pl.eu/api/v1/oapi",
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="deepseek-v4-flash",
+        model="deepseek/deepseek-v4-flash",
         temperature=0
     )
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
-    prompt_template = hub.pull("langchain-ai/sql-agent-system-prompt")
-    system_message = prompt_template.format(dialect=db.dialect)
+    system_message = f"""
+    You are an agent designed to interact with a SQL database.
 
-    agent_executor = create_react_agent(
-        llm, 
-        toolkit.get_tools(), 
-        state_modifier=system_message
+    The database dialect is {db.dialect}.
+
+    Follow these rules:
+    1. First, examine the database structure using the available tools.
+    2. Generate correct SQL queries based on the user's question.
+    3. Execute the queries using the available SQL tools.
+    4. Never execute INSERT, UPDATE, DELETE, DROP or other data-modifying statements.
+    5. If a query fails, analyze the error and try to correct it.
+    6. Provide the final answer in the same language as the user's question.
+    7. Be concise and explain the results clearly.
+    """
+
+    agent_executor = create_agent(
+        model=llm, 
+        tools=toolkit.get_tools(), 
+        system_prompt=system_message
     )
 
     example_query = "Ile mamy rekordów w bazie?"
