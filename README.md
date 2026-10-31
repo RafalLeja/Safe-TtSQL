@@ -15,6 +15,7 @@ Create a `.env` file in the root directory with the following content:
 ```bash
 DB_USER=postgres
 DB_PASSWORD=your_password
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 ## Models to test
