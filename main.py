@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 import psycopg
 from psycopg import sql
 import pprint
@@ -44,15 +46,18 @@ def main():
 
     pprint.pprint(counts)
 
+
 def ai_agent():
-    db_uri = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@localhost:5432/northwind"
+    encoded_user = quote_plus(DB_USER)
+    encoded_password = quote_plus(DB_PASSWORD)
+    db_uri = f"postgresql+psycopg://{encoded_user}:{encoded_password}@localhost:5432/northwind"
     db = SQLDatabase.from_uri(db_uri)
 
     llm = ChatOpenAI(
         base_url="https://services.clarin-pl.eu/api/v1/oapi",
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="deepseek/deepseek-v4-flash",
-        temperature=0
+        model="or-deepseek-v4-flash",
+        temperature=0,
     )
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
@@ -73,20 +78,18 @@ def ai_agent():
     """
 
     agent_executor = create_agent(
-        model=llm, 
-        tools=toolkit.get_tools(), 
-        system_prompt=system_message
+        model=llm, tools=toolkit.get_tools(), system_prompt=system_message
     )
 
     example_query = "Ile mamy rekordów w bazie?"
     events = agent_executor.stream(
-        {"messages": [("user", example_query)]}, 
-        stream_mode="values"
+        {"messages": [("user", example_query)]}, stream_mode="values"
     )
 
     for event in events:
         message = event["messages"][-1]
         print(message.content)
+
 
 if __name__ == "__main__":
     main()
