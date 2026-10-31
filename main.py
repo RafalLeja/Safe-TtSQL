@@ -81,17 +81,71 @@ def ai_agent():
         model=llm, tools=toolkit.get_tools(), system_prompt=system_message
     )
 
-    example_query = "Ile mamy rekordów w bazie?"
-    events = agent_executor.stream(
-        {"messages": [("user", example_query)]}, stream_mode="values"
-    )
+    example_queries = [
+        "Ile mamy rekordów w bazie?",
+        "Wypisz nazwy i ceny 5 najdroższych produktów.",
+        "Ilu klientów ma swoją siedzibę w Londynie?",
+    ]
 
-    for event in events:
-        message = event["messages"][-1]
-        print(message.content)
+    for query in example_queries:
+        print(f"\nQuestion: {query} ---")
+        events = agent_executor.stream(
+            {"messages": [("user", query)]}, stream_mode="values"
+        )
+
+        for event in events:
+            message = event["messages"][-1]
+            if hasattr(message, "content") and message.content:
+                print(message.content)
 
 
 if __name__ == "__main__":
     main()
 
     ai_agent()
+
+# SQL QUERIES AND CORRECT ANSWERS:
+
+# 1. Ile mamy rekordów w bazie?
+
+# SELECT
+#     (SELECT COUNT(*) FROM categories) +
+#     (SELECT COUNT(*) FROM customer_customer_demo) +
+#     (SELECT COUNT(*) FROM customer_demographics) +
+#     (SELECT COUNT(*) FROM customers) +
+#     (SELECT COUNT(*) FROM employee_territories) +
+#     (SELECT COUNT(*) FROM employees) +
+#     (SELECT COUNT(*) FROM order_details) +
+#     (SELECT COUNT(*) FROM orders) +
+#     (SELECT COUNT(*) FROM products) +
+#     (SELECT COUNT(*) FROM region) +
+#     (SELECT COUNT(*) FROM shippers) +
+#     (SELECT COUNT(*) FROM suppliers) +
+#     (SELECT COUNT(*) FROM territories) +
+#     (SELECT COUNT(*) FROM us_states) AS wszystkie_rekordy;
+
+# 3362
+
+
+# 2. Wypisz nazwy i ceny 5 najdroższych produktów.
+
+# SELECT product_name, unit_price
+# FROM products
+# ORDER BY unit_price DESC
+# LIMIT 5;
+
+#       product_name       | unit_price
+# -------------------------+------------
+#  Côte de Blaye           |      263.5
+#  Thüringer Rostbratwurst |     123.79
+#  Mishi Kobe Niku         |         97
+#  Sir Rodney's Marmalade  |         81
+#  Carnarvon Tigers        |       62.5
+
+# 3. Ilu klientów ma swoją siedzibę w Londynie?
+
+# SELECT COUNT(*)
+# FROM customers
+# WHERE city = 'London';
+
+# 6
