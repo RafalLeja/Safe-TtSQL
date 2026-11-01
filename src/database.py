@@ -30,10 +30,6 @@ def get_table_counts() -> dict[str, int]:
     return counts
 
 
-def get_total_records() -> int:
-    return sum(get_table_counts().values())
-
-
 def get_top_expensive_products(limit: int = 5) -> list[tuple[str, float]]:
     with psycopg.connect(CONN_STRING) as conn:
         with conn.cursor() as cursor:

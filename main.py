@@ -1,6 +1,5 @@
 from src.database import (
     get_table_counts,
-    get_total_records,
     get_top_expensive_products,
     get_customers_count_by_city,
 )
