@@ -15,7 +15,7 @@ def main():
             print(f"{table:<25} : {count}")
         print()
 
-        total_records = get_total_records()
+        total_records = sum(counts.values())
         print(f"Liczba rekordów we wszystkich tabelach: {total_records}\n")
 
         expensive_products = get_top_expensive_products()
