@@ -28,6 +28,7 @@ def main():
 
     except Exception as e:
         print(f"Connection error: {e}")
+        return
 
     agent = create_ai_agent()
 
