@@ -1,8 +1,8 @@
 import psycopg
 from psycopg import sql
-from src.config import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME
+from src.config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
 
-CONN_STRING = f"host={DB_HOST} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}"
+CONN_STRING = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}"
 
 
 def get_table_counts() -> dict[str, int]:
