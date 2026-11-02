@@ -5,6 +5,10 @@ from src.config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
 CONN_STRING = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}"
 
 
+def get_connection() -> psycopg.Connection:
+    return psycopg.connect(CONN_STRING)
+
+
 def get_table_counts() -> dict[str, int]:
     counts = {}
     with psycopg.connect(CONN_STRING) as conn:
