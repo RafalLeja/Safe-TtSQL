@@ -1,9 +1,11 @@
 from urllib.parse import quote_plus
-from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from langchain_community.utilities.sql_database import SQLDatabase
+
+from langchain.agents import create_agent
+from langchain_core.messages import AIMessageChunk
 from langchain_openai import ChatOpenAI
-from langchain_community.agent_toolkits import create_sql_agent
-from src.config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, OPENAI_API_KEY
+
+from src.config import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER, OPENAI_API_KEY
+from src.tools import execute_sql, get_schema, list_tables
 
 
 def get_db_uri() -> str:
@@ -13,32 +15,35 @@ def get_db_uri() -> str:
 
 
 def create_ai_agent():
-    db = SQLDatabase.from_uri(get_db_uri())
-
-    llm = ChatOpenAI(
-        base_url="https://services.clarin-pl.eu/api/v1/oapi",
-        api_key=OPENAI_API_KEY,
-        model="or-deepseek-v4-flash",
-        temperature=0,
+    return create_agent(
+        model=ChatOpenAI(
+            base_url="https://services.clarin-pl.eu/api/v1/oapi",
+            api_key=OPENAI_API_KEY,
+            model="or-deepseek-v4-flash",
+            temperature=0,
+        ),
+        tools=[list_tables, get_schema, execute_sql],
+        system_prompt="""
+        You are a helpful assistant that can answer questions
+        about the database. You have access to the following tools:
+        list_tables, 
+        get_schema, 
+        execute_sql. 
+        Use them to answer questions.
+        """,
+        debug=False,
     )
-
-    toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-
-    agent_executor = create_sql_agent(
-        llm=llm,
-        toolkit=toolkit,
-        agent_type="openai-tools",
-        verbose=False,
-    )
-
-    return agent_executor
 
 
 def run_queries(agent_executor, queries: list[str]):
     for query in queries:
+        print("\n" + "=" * 80)
         print(f"\nQuestion: {query}")
         try:
-            response = agent_executor.invoke({"input": query})
-            print(response.get("output", "No answer."))
+            inputs = {"messages": [{"role": "user", "content": query}]}
+            for chunk in agent_executor.stream(inputs, stream_mode="messages"):
+                message, metadata = chunk
+                if isinstance(message, AIMessageChunk):
+                    print(message.text, end="", flush=True)
         except Exception as e:
             print(f"Error while agent execution: {e}")

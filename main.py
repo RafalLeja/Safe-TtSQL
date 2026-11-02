@@ -1,9 +1,9 @@
+from src.agent import create_ai_agent, run_queries
 from src.database import (
+    get_customers_count_by_city,
     get_table_counts,
     get_top_expensive_products,
-    get_customers_count_by_city,
 )
-from src.agent import create_ai_agent, run_queries
 
 
 def main():
