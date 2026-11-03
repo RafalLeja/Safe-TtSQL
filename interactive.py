@@ -1,5 +1,9 @@
 from src.agent import create_ai_agent, run_queries
 
+# TODO:
+# - interfejs
+#   - historia pytań i odpowiedzi
+
 
 def main():
     agent = create_ai_agent()
