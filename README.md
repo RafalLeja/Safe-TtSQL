@@ -22,3 +22,11 @@ OPENAI_API_KEY=your_openai_api_key
 
 1. gpt-6-luna vs gpt-5.2
 2. or-gpt-oss-120b vs or-gpt-oss-20b
+
+## Running the application
+
+```bash
+uv run app.py
+```
+
+Application will be available at `http://127.0.0.1:5000`

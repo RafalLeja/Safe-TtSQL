@@ -47,3 +47,17 @@ def run_queries(agent_executor, queries: list[str]):
                     print(message.text, end="", flush=True)
         except Exception as e:
             print(f"Error while agent execution: {e}")
+
+
+def ask_agent(agent_executor, query: str) -> str:
+    inputs = {"messages": [{"role": "user", "content": query}]}
+    try:
+        result = agent_executor.invoke(inputs)
+
+        if "messages" in result:
+            return result["messages"][-1].content
+
+        return str(result)
+
+    except Exception as e:
+        return f"Error: {e}"

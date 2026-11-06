@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Lista rozmów - Northwind AI</title>
+</head>
+
+<body>
+  <h1>Northwind AI Agent</h1>
+
+  <h2>Rozpocznij nową rozmowę</h2>
+  <form action="/new_chat" method="POST">
+    <textarea name="query" rows="3" style="width: 100%;" required
+      placeholder="O co chcesz zapytać bazę Northwind?"></textarea><br><br>
+    <button type="submit">Zadaj pytanie</button>
+  </form>
+
+  <hr>
+
+  <h2>Twoje wcześniejsze rozmowy</h2>
+  {% if conversations %}
+  <ul>
+    {% for conv_id, title in conversations %}
+    <li>
+      <a href="/chat/{{ conv_id }}">{{ title }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>Brak historii rozmów.</p>
+  {% endif %}
+</body>
+
+</html>
