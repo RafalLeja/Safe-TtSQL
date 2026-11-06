@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Czat #{{ conv_id }}</title>
+</head>
+
+<body>
+  <a href="/">Wróć do listy rozmów</a>
+  <h1>Historia rozmowy</h1>
+
+  <div style="margin-bottom: 20px;">
+    {% if messages %}
+    {% for prompt, response in messages %}
+    <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+      <strong>Ty:</strong> {{ prompt }}<br>
+      <strong>Agent:</strong>
+      <pre style="white-space: pre-wrap;">{{ response }}</pre>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>Ta rozmowa jest pusta. Napisz coś poniżej.</p>
+    {% endif %}
+  </div>
+
+  <hr>
+
+  <h2>Napisz nową wiadomość</h2>
+  <form action="/chat/{{ conv_id }}" method="POST">
+    <textarea name="query" rows="4" cols="50" required placeholder="Zadaj pytanie..."></textarea><br><br>
+    <button type="submit">Wyślij</button>
+  </form>
+</body>
+
+</html>
