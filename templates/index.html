@@ -3,33 +3,68 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Lista rozmów - Northwind AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nowa rozmowa - Northwind AI Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-  <h1>Northwind AI Agent</h1>
+<body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
 
-  <h2>Rozpocznij nową rozmowę</h2>
-  <form action="/new_chat" method="POST">
-    <textarea name="query" rows="3" style="width: 100%;" required
-      placeholder="O co chcesz zapytać bazę Northwind?"></textarea><br><br>
-    <button type="submit">Zadaj pytanie</button>
-  </form>
 
-  <hr>
+  <aside class="w-64 bg-gray-950 flex flex-col border-r border-gray-800">
+    <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+      <a href="/" class="font-bold text-lg tracking-wide hover:text-indigo-400 transition">Northwind AI</a>
+    </div>
 
-  <h2>Twoje wcześniejsze rozmowy</h2>
-  {% if conversations %}
-  <ul>
-    {% for conv_id, title in conversations %}
-    <li>
-      <a href="/chat/{{ conv_id }}">{{ title }}</a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>Brak historii rozmów.</p>
-  {% endif %}
+
+    <div class="p-3">
+      <a href="/"
+        class="flex items-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-medium transition shadow-sm text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nowa rozmowa
+      </a>
+    </div>
+
+
+    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
+      {% if conversations %}
+      {% for conv_id, title in conversations %}
+      <a href="/chat/{{ conv_id }}"
+        class="block px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white truncate transition">
+        {{ title }}
+      </a>
+      {% endfor %}
+      {% else %}
+      <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+      {% endif %}
+    </div>
+  </aside>
+
+
+  <main class="flex-1 flex flex-col items-center justify-center p-6 bg-gray-900">
+    <div class="max-w-xl w-full text-center space-y-6">
+      <h1 class="text-3xl font-bold tracking-tight text-white">O co chcesz zapytać bazę Northwind?</h1>
+
+      <form action="/new_chat" method="POST" class="space-y-4">
+        <div class="relative">
+          <textarea name="query" rows="4" required
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none shadow-lg text-sm"
+            placeholder="Wpisz swoje pytanie (np. Ile mamy zamówień?)..."></textarea>
+        </div>
+        <button type="submit"
+          class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+          <span>Rozpocznij czat</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  </main>
+
 </body>
 
 </html>
