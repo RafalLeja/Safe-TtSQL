@@ -49,7 +49,15 @@ def chat(conv_id):
         return redirect(url_for("chat", conv_id=conv_id))
 
     messages = get_messages(conv_id)
-    return render_template("chat.html", conv_id=conv_id, messages=messages)
+    conversations = get_conversations()
+    title = next((t for i, t in conversations if i == conv_id), f"Konwersacja #{conv_id}")
+    return render_template(
+        "chat.html",
+        conv_id=conv_id,
+        messages=messages,
+        conversations=conversations,
+        title=title,
+    )
 
 
 if __name__ == "__main__":

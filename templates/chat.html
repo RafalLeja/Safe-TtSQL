@@ -29,11 +29,17 @@
 
 
     <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Aktywna rozmowa</div>
-      <div class="px-3 py-2 rounded-lg text-sm bg-gray-800 text-white font-medium truncate">
-        Rozmowa nr {{ conv_id }}
-      </div>
-
+      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
+      {% if conversations %}
+      {% for id, title in conversations %}
+      <a href="/chat/{{ id }}" {% if id == conv_id %}class="block px-3 py-2 rounded-lg text-sm bg-gray-800 text-white font-medium truncate transition"
+        {% else %}class="block px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white truncate transition"{% endif %}>
+        {{ title }}
+      </a>
+      {% endfor %}
+      {% else %}
+      <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+      {% endif %}
     </div>
   </aside>
 
@@ -42,7 +48,7 @@
 
 
     <header class="h-14 border-b border-gray-800 flex items-center px-6 bg-gray-900/50 backdrop-blur">
-      <span class="text-sm font-medium text-gray-400">Konwersacja #{{ conv_id }}</span>
+      <span class="text-sm font-medium text-gray-400">{{ title }}</span>
     </header>
 
 
