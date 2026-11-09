@@ -90,6 +90,18 @@
 
   </main>
 
+  <script>
+    const form = document.querySelector('form[action^="/chat/"]');
+    const textarea = form.querySelector('textarea[name="query"]');
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (textarea.value.trim() !== '') {
+          form.submit();
+        }
+      }
+    });
+  </script>
 </body>
 
 </html>
