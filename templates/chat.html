@@ -65,7 +65,7 @@
           AI</div>
         <div
           class="bg-gray-800 border border-gray-700/60 text-gray-200 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md space-y-2">
-          <pre class="whitespace-pre-wrap font-sans leading-relaxed">{{ response }}</pre>
+          <div class="md-content leading-relaxed">{{ response }}</div>
         </div>
       </div>
       {% endfor %}
@@ -102,6 +102,42 @@
       }
     });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script>
+    document.querySelectorAll('.md-content').forEach((el) => {
+      el.innerHTML = DOMPurify.sanitize(marked.parse(el.textContent));
+    });
+  </script>
+
+  <style>
+    .md-content p { margin: 0.25rem 0; }
+    .md-content ul, .md-content ol { margin: 0.5rem 0; padding-left: 1.25rem; list-style: revert; }
+    .md-content ul { list-style-type: disc; }
+    .md-content ol { list-style-type: decimal; }
+    .md-content h1, .md-content h2, .md-content h3, .md-content h4 {
+      font-weight: 600; margin: 0.75rem 0 0.25rem; }
+    .md-content h1 { font-size: 1.1rem; }
+    .md-content h2 { font-size: 1.05rem; }
+    .md-content strong { color: #fff; font-weight: 600; }
+    .md-content code {
+      background: #111827; border: 1px solid #374151; border-radius: 4px;
+      padding: 0.1rem 0.3rem; font-size: 0.8rem; }
+    .md-content pre {
+      background: #111827; border: 1px solid #374151; border-radius: 8px;
+      padding: 0.75rem; overflow-x: auto; margin: 0.5rem 0; }
+    .md-content pre code { background: none; border: none; padding: 0; }
+    .md-content table {
+      border-collapse: collapse; margin: 0.5rem 0; width: 100%; }
+    .md-content th, .md-content td {
+      border: 1px solid #374151; padding: 0.35rem 0.6rem; text-align: left; }
+    .md-content th { background: #1f2937; font-weight: 600; }
+    .md-content blockquote {
+      border-left: 3px solid #4f46e5; margin: 0.5rem 0; padding-left: 0.75rem;
+      color: #9ca3af; }
+    .md-content a { color: #818cf8; text-decoration: underline; }
+  </style>
 </body>
 
 </html>
