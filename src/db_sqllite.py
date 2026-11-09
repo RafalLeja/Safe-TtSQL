@@ -39,7 +39,7 @@ def create_conversation(title):
         return cursor.lastrowid
 
 
-def get_messages(conversation_id):
+def get_messages(conversation_id) -> list[tuple[str, str]]:
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute(
