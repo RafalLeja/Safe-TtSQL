@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from itertools import chain
 from urllib.parse import quote_plus
 
 from langchain.agents import create_agent
@@ -49,8 +51,23 @@ def run_queries(agent_executor, queries: list[str]):
             print(f"Error while agent execution: {e}")
 
 
-def ask_agent(agent_executor, query: str) -> str:
-    inputs = {"messages": [{"role": "user", "content": query}]}
+def ask_agent(
+    agent_executor, query: str, context: list[tuple[str, str]] | None = None
+) -> str:
+    inputs = {
+        "messages": list(
+            chain.from_iterable(
+                [
+                    [
+                        {"role": "user", "content": prompt},
+                        {"role": "assistant", "content": response},
+                    ]
+                    for prompt, response in context
+                ]
+            )
+        )
+        + [{"role": "user", "content": query}]
+    }
     try:
         result = agent_executor.invoke(inputs)
 

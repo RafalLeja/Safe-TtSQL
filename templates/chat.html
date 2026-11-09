@@ -29,11 +29,17 @@
 
 
     <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Aktywna rozmowa</div>
-      <div class="px-3 py-2 rounded-lg text-sm bg-gray-800 text-white font-medium truncate">
-        Rozmowa nr {{ conv_id }}
-      </div>
-
+      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
+      {% if conversations %}
+      {% for id, title in conversations %}
+      <a href="/chat/{{ id }}" {% if id == conv_id %}class="block px-3 py-2 rounded-lg text-sm bg-gray-800 text-white font-medium truncate transition"
+        {% else %}class="block px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white truncate transition"{% endif %}>
+        {{ title }}
+      </a>
+      {% endfor %}
+      {% else %}
+      <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+      {% endif %}
     </div>
   </aside>
 
@@ -42,7 +48,7 @@
 
 
     <header class="h-14 border-b border-gray-800 flex items-center px-6 bg-gray-900/50 backdrop-blur">
-      <span class="text-sm font-medium text-gray-400">Konwersacja #{{ conv_id }}</span>
+      <span class="text-sm font-medium text-gray-400">{{ title }}</span>
     </header>
 
 
@@ -65,7 +71,7 @@
           AI</div>
         <div
           class="bg-gray-800 border border-gray-700/60 text-gray-200 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md space-y-2">
-          <pre class="whitespace-pre-wrap font-sans leading-relaxed">{{ response }}</pre>
+          <div class="md-content leading-relaxed">{{ response }}</div>
         </div>
       </div>
       {% endfor %}
@@ -90,6 +96,54 @@
 
   </main>
 
+  <script>
+    const form = document.querySelector('form[action^="/chat/"]');
+    const textarea = form.querySelector('textarea[name="query"]');
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (textarea.value.trim() !== '') {
+          form.submit();
+        }
+      }
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script>
+    document.querySelectorAll('.md-content').forEach((el) => {
+      el.innerHTML = DOMPurify.sanitize(marked.parse(el.textContent));
+    });
+  </script>
+
+  <style>
+    .md-content p { margin: 0.25rem 0; }
+    .md-content ul, .md-content ol { margin: 0.5rem 0; padding-left: 1.25rem; list-style: revert; }
+    .md-content ul { list-style-type: disc; }
+    .md-content ol { list-style-type: decimal; }
+    .md-content h1, .md-content h2, .md-content h3, .md-content h4 {
+      font-weight: 600; margin: 0.75rem 0 0.25rem; }
+    .md-content h1 { font-size: 1.1rem; }
+    .md-content h2 { font-size: 1.05rem; }
+    .md-content strong { color: #fff; font-weight: 600; }
+    .md-content code {
+      background: #111827; border: 1px solid #374151; border-radius: 4px;
+      padding: 0.1rem 0.3rem; font-size: 0.8rem; }
+    .md-content pre {
+      background: #111827; border: 1px solid #374151; border-radius: 8px;
+      padding: 0.75rem; overflow-x: auto; margin: 0.5rem 0; }
+    .md-content pre code { background: none; border: none; padding: 0; }
+    .md-content table {
+      border-collapse: collapse; margin: 0.5rem 0; width: 100%; }
+    .md-content th, .md-content td {
+      border: 1px solid #374151; padding: 0.35rem 0.6rem; text-align: left; }
+    .md-content th { background: #1f2937; font-weight: 600; }
+    .md-content blockquote {
+      border-left: 3px solid #4f46e5; margin: 0.5rem 0; padding-left: 0.75rem;
+      color: #9ca3af; }
+    .md-content a { color: #818cf8; text-decoration: underline; }
+  </style>
 </body>
 
 </html>

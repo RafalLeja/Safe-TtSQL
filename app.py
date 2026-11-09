@@ -1,10 +1,11 @@
-from flask import Flask, request, render_template, redirect, url_for
-from src.agent import create_ai_agent, ask_agent
+from flask import Flask, redirect, render_template, request, url_for
+
+from src.agent import ask_agent, create_ai_agent
 from src.db_sqllite import (
-    init_db,
-    get_conversations,
     create_conversation,
+    get_conversations,
     get_messages,
+    init_db,
     save_message,
 )
 
@@ -42,14 +43,21 @@ def chat(conv_id):
     if request.method == "POST":
         user_query = request.form.get("query")
         if user_query:
-            # AGENT odpowiada tylko na bieżący prompt.
-            # TO DO: można zmienić by dawać mu cały kontekst z poprzednich wiadomości z get_messages(conv_id).
-            ai_response = ask_agent(agent, user_query)
+            context_messages = get_messages(conv_id)
+            ai_response = ask_agent(agent, user_query, context=context_messages)
             save_message(conv_id, user_query, ai_response)
         return redirect(url_for("chat", conv_id=conv_id))
 
     messages = get_messages(conv_id)
-    return render_template("chat.html", conv_id=conv_id, messages=messages)
+    conversations = get_conversations()
+    title = next((t for i, t in conversations if i == conv_id), f"Konwersacja #{conv_id}")
+    return render_template(
+        "chat.html",
+        conv_id=conv_id,
+        messages=messages,
+        conversations=conversations,
+        title=title,
+    )
 
 
 if __name__ == "__main__":
