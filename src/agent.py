@@ -51,7 +51,9 @@ def run_queries(agent_executor, queries: list[str]):
             print(f"Error while agent execution: {e}")
 
 
-def ask_agent(agent_executor, query: str, context: list[tuple[str, str]] = []) -> str:
+def ask_agent(
+    agent_executor, query: str, context: list[tuple[str, str]] | None = None
+) -> str:
     inputs = {
         "messages": list(
             chain.from_iterable(
@@ -73,33 +75,6 @@ def ask_agent(agent_executor, query: str, context: list[tuple[str, str]] = []) -
             return result["messages"][-1].content
 
         return str(result)
-
-    except Exception as e:
-        return f"Error: {e}"
-
-
-def ask_agent_stream(
-    agent_executor, query: str, context: list[tuple[str, str]] = []
-) -> Generator[str]:
-    inputs = {
-        "messages": list(
-            chain.from_iterable(
-                [
-                    [
-                        {"role": "user", "content": prompt},
-                        {"role": "assistant", "content": response},
-                    ]
-                    for prompt, response in context
-                ]
-            )
-        )
-        + [{"role": "user", "content": query}]
-    }
-    try:
-        for chunk in agent_executor.stream(inputs, stream_mode="messages"):
-            message, _metadata = chunk
-            if isinstance(message, AIMessageChunk):
-                yield message.text
 
     except Exception as e:
         return f"Error: {e}"
