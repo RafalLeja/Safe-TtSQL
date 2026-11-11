@@ -54,9 +54,8 @@ def run_queries(agent_executor, queries: list[str]):
 def ask_agent(
     agent_executor, query: str, context: list[tuple[str, str]] | None = None
 ) -> str:
-
-    inputs = {
-        "messages": list(
+    messages = (
+        list(
             chain.from_iterable(
                 [
                     [
@@ -68,8 +67,13 @@ def ask_agent(
             )
         )
         if context is not None
-        else [] + [{"role": "user", "content": query}]
-    }
+        else []
+    )
+
+    messages.append({"role": "user", "content": query})
+
+    inputs = {"messages": messages}
+
     try:
         result = agent_executor.invoke(inputs)
 
