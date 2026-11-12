@@ -78,9 +78,23 @@ def ask_agent(
         result = agent_executor.invoke(inputs)
 
         if "messages" in result:
-            return result["messages"][-1].content
+            sql_queries = []
+            for msg in result["messages"][len(messages) :]:
+                if getattr(msg, "tool_calls", None):
+                    for tc in msg.tool_calls:
+                        if tc["name"] == "execute_sql":
+                            sql = tc["args"].get("query")
+                            if sql:
+                                sql_queries.append(sql)
 
-        return str(result)
+            answer = result["messages"][-1].content
 
+            if sql_queries:
+                formatted_sql = "\n\n".join(
+                    f"```sql\n{q.strip()}\n```" for q in sql_queries
+                )
+                return f"{answer}\n\n---\n**Wykonane zapytanie SQL:**\n{formatted_sql}"
+
+        return answer
     except Exception as e:
         return f"Error: {e}"
