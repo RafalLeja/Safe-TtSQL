@@ -4,6 +4,8 @@ from src.db_sqllite import (
     init_db,
     get_conversations,
     create_conversation,
+    toggle_pin_conversation,
+    delete_conversation,
     get_messages,
     save_message,
 )
@@ -48,8 +50,22 @@ def chat(conv_id):
             save_message(conv_id, user_query, ai_response)
         return redirect(url_for("chat", conv_id=conv_id))
 
+    conversations = get_conversations
     messages = get_messages(conv_id)
-    return render_template("chat.html", conv_id=conv_id, messages=messages)
+    return render_template("chat.html", conv_id=conv_id, messages=messages, conversations=conversations)
+
+@app.route("/pin/<int:conv_id>", methods=["POST"])
+def pin_chat(conv_id):
+    toggle_pin_conversation(conv_id)
+    return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/delete/<int:conv_id>", methods=["POST"])
+def delete_chat(conv_id):
+    delete_conversation(conv_id)
+    if request.referrer and f"/chat/{conv_id}" in request.referrer:
+        return redirect(url_for("index"))
+    return redirect(request.referrer or url_for("index"))
 
 
 if __name__ == "__main__":

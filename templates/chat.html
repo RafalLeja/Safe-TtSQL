@@ -10,12 +10,10 @@
 
 <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
 
-
-  <aside class="w-64 bg-gray-950 flex flex-col border-r border-gray-800">
+  <aside class="w-72 bg-gray-950 flex flex-col border-r border-gray-800">
     <div class="p-4 border-b border-gray-800 flex items-center justify-between">
       <a href="/" class="font-bold text-lg tracking-wide hover:text-indigo-400 transition">Northwind AI</a>
     </div>
-
 
     <div class="p-3">
       <a href="/"
@@ -27,29 +25,87 @@
       </a>
     </div>
 
+    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+      {% set pinned = conversations | selectattr(2, 'equalto', 1) | list %}
+      {% set unpinned = conversations | selectattr(2, 'equalto', 0) | list %}
 
-    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-      <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Aktywna rozmowa</div>
-      <div class="px-3 py-2 rounded-lg text-sm bg-gray-800 text-white font-medium truncate">
-        Rozmowa nr {{ conv_id }}
+      <!-- Przypięte -->
+      {% if pinned %}
+      <div>
+        <div
+          class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider px-3 mb-1.5 flex items-center gap-1">
+          <span>★ Przypięte</span>
+        </div>
+        <div class="space-y-1">
+          {% for c_id, title, is_pinned in pinned %}
+          <div
+            class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}">
+            <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm truncate pr-16">
+              {{ title }}
+            </a>
+            <div
+              class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
+              <form action="/pin/{{ c_id }}" method="POST" class="inline">
+                <button type="submit" title="Odepnij" class="p-1 text-amber-400 rounded">
+                  ★
+                </button>
+              </form>
+              <form action="/delete/{{ c_id }}" method="POST" class="inline"
+                onsubmit="return confirm('Usunąć tę rozmowę?');">
+                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
+                  🗑
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
+      {% endif %}
 
+      <!-- Historia -->
+      <div>
+        <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
+        {% if unpinned %}
+        <div class="space-y-1">
+          {% for c_id, title, is_pinned in unpinned %}
+          <div
+            class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}">
+            <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm truncate pr-16">
+              {{ title }}
+            </a>
+            <div
+              class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
+              <form action="/pin/{{ c_id }}" method="POST" class="inline">
+                <button type="submit" title="Przypnij" class="p-1 text-gray-400 hover:text-amber-400 rounded">
+                  ☆
+                </button>
+              </form>
+              <form action="/delete/{{ c_id }}" method="POST" class="inline"
+                onsubmit="return confirm('Usunąć tę rozmowę?');">
+                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
+                  🗑
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% elif not pinned %}
+        <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+        {% endif %}
+      </div>
     </div>
   </aside>
 
-
   <main class="flex-1 flex flex-col h-full bg-gray-900">
-
-
     <header class="h-14 border-b border-gray-800 flex items-center px-6 bg-gray-900/50 backdrop-blur">
       <span class="text-sm font-medium text-gray-400">Konwersacja #{{ conv_id }}</span>
     </header>
 
-
     <div class="flex-1 overflow-y-auto p-6 space-y-6">
       {% if messages %}
       {% for prompt, response in messages %}
-
       <div class="flex items-start gap-4 max-w-3xl mx-auto w-full justify-end">
         <div class="bg-indigo-600 text-white rounded-2xl px-4 py-3 max-w-xl text-sm shadow-md">
           {{ prompt }}
@@ -57,7 +113,6 @@
         <div class="w-8 h-8 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">Ty
         </div>
       </div>
-
 
       <div class="flex items-start gap-4 max-w-3xl mx-auto w-full">
         <div
@@ -74,7 +129,6 @@
       {% endif %}
     </div>
 
-
     <div class="p-4 bg-gray-900 border-t border-gray-800">
       <form action="/chat/{{ conv_id }}" method="POST" class="max-w-3xl mx-auto relative flex items-center">
         <textarea name="query" rows="1" required placeholder="Napisz wiadomość do agenta..."
@@ -87,7 +141,6 @@
         </button>
       </form>
     </div>
-
   </main>
 
 </body>
