@@ -26,18 +26,25 @@
     </div>
 
     <div class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-      {% set pinned = conversations | selectattr(2, 'equalto', 1) | list %}
-      {% set unpinned = conversations | selectattr(2, 'equalto', 0) | list %}
+      {% if conversations %}
 
       <!-- Przypięte -->
-      {% if pinned %}
+      {% set ns = namespace(has_pinned=false) %}
+      {% for c_id, title, is_pinned in conversations %}
+      {% if is_pinned == 1 %}
+      {% set ns.has_pinned = true %}
+      {% endif %}
+      {% endfor %}
+
+      {% if ns.has_pinned %}
       <div>
         <div
           class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider px-3 mb-1.5 flex items-center gap-1">
           <span>★ Przypięte</span>
         </div>
         <div class="space-y-1">
-          {% for c_id, title, is_pinned in pinned %}
+          {% for c_id, title, is_pinned in conversations %}
+          {% if is_pinned == 1 %}
           <div class="group relative flex items-center rounded-lg hover:bg-gray-800 transition">
             <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm text-gray-200 truncate pr-16">
               {{ title }}
@@ -45,18 +52,15 @@
             <div
               class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
               <form action="/pin/{{ c_id }}" method="POST" class="inline">
-                <button type="submit" title="Odepnij" class="p-1 text-amber-400 hover:text-gray-300 rounded">
-                  ★
-                </button>
+                <button type="submit" title="Odepnij" class="p-1 text-amber-400 hover:text-gray-300 rounded">★</button>
               </form>
               <form action="/delete/{{ c_id }}" method="POST" class="inline"
                 onsubmit="return confirm('Usunąć tę rozmowę?');">
-                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
-                  🗑
-                </button>
+                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">🗑</button>
               </form>
             </div>
           </div>
+          {% endif %}
           {% endfor %}
         </div>
       </div>
@@ -65,9 +69,11 @@
       <!-- Historia -->
       <div>
         <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
-        {% if unpinned %}
         <div class="space-y-1">
-          {% for c_id, title, is_pinned in unpinned %}
+          {% set ns = namespace(has_unpinned=false) %}
+          {% for c_id, title, is_pinned in conversations %}
+          {% if is_pinned != 1 %}
+          {% set ns.has_unpinned = true %}
           <div class="group relative flex items-center rounded-lg hover:bg-gray-800 transition">
             <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm text-gray-300 hover:text-white truncate pr-16">
               {{ title }}
@@ -75,24 +81,22 @@
             <div
               class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
               <form action="/pin/{{ c_id }}" method="POST" class="inline">
-                <button type="submit" title="Przypnij" class="p-1 text-gray-400 hover:text-amber-400 rounded">
-                  ☆
-                </button>
+                <button type="submit" title="Przypnij" class="p-1 text-gray-400 hover:text-amber-400 rounded">☆</button>
               </form>
               <form action="/delete/{{ c_id }}" method="POST" class="inline"
                 onsubmit="return confirm('Usunąć tę rozmowę?');">
-                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
-                  🗑
-                </button>
+                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">🗑</button>
               </form>
             </div>
           </div>
+          {% endif %}
           {% endfor %}
         </div>
-        {% elif not pinned %}
-        <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
-        {% endif %}
       </div>
+
+      {% else %}
+      <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+      {% endif %}
     </div>
   </aside>
 
@@ -119,15 +123,19 @@
 
   <script>
     const form = document.querySelector('form[action="/new_chat"]');
-    const textarea = form.querySelector('textarea[name="query"]');
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (textarea.value.trim() !== '') {
-          form.submit();
-        }
+    if (form) {
+      const textarea = form.querySelector('textarea[name="query"]');
+      if (textarea) {
+        textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (textarea.value.trim() !== '') {
+              form.submit();
+            }
+          }
+        });
       }
-    });
+    }
   </script>
 </body>
 

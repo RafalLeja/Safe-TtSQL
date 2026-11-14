@@ -34,7 +34,7 @@ def init_db():
 def get_conversations():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title FROM conversations ORDER BY id DESC")
+        cursor.execute("SELECT id, title, is_pinned FROM conversations ORDER BY is_pinned DESC, id DESC")
         return cursor.fetchall()
 
 

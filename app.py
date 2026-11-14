@@ -52,7 +52,8 @@ def chat(conv_id):
 
     conversations = get_conversations()
     messages = get_messages(conv_id)
-    return render_template("chat.html", conv_id=conv_id, messages=messages, conversations=conversations)
+    title = next((row[1] for row in conversations if row[0] == conv_id), f"Konwersacja #{conv_id}")
+    return render_template("chat.html", conv_id=conv_id, messages=messages, conversations=conversations, title=title)
 
 @app.route("/pin/<int:conv_id>", methods=["POST"])
 def pin_chat(conv_id):
@@ -66,15 +67,8 @@ def delete_chat(conv_id):
     if request.referrer and f"/chat/{conv_id}" in request.referrer:
         return redirect(url_for("index"))
     return redirect(request.referrer or url_for("index"))
-    conversations = get_conversations()
-    title = next((t for i, t in conversations if i == conv_id), f"Konwersacja #{conv_id}")
-    return render_template(
-        "chat.html",
-        conv_id=conv_id,
-        messages=messages,
-        conversations=conversations,
-        title=title,
-    )
+    
+
 
 
 if __name__ == "__main__":
