@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from itertools import chain
 from urllib.parse import quote_plus
 
 from langchain.agents import create_agent
@@ -49,15 +51,50 @@ def run_queries(agent_executor, queries: list[str]):
             print(f"Error while agent execution: {e}")
 
 
-def ask_agent(agent_executor, query: str) -> str:
-    inputs = {"messages": [{"role": "user", "content": query}]}
+def ask_agent(
+    agent_executor, query: str, context: list[tuple[str, str]] | None = None
+) -> str:
+    messages = (
+        list(
+            chain.from_iterable(
+                [
+                    [
+                        {"role": "user", "content": prompt},
+                        {"role": "assistant", "content": response},
+                    ]
+                    for prompt, response in context
+                ]
+            )
+        )
+        if context is not None
+        else []
+    )
+
+    messages.append({"role": "user", "content": query})
+
+    inputs = {"messages": messages}
+
     try:
         result = agent_executor.invoke(inputs)
 
         if "messages" in result:
-            return result["messages"][-1].content
+            sql_queries = []
+            for msg in result["messages"][len(messages) :]:
+                if getattr(msg, "tool_calls", None):
+                    for tc in msg.tool_calls:
+                        if tc["name"] == "execute_sql":
+                            sql = tc["args"].get("query")
+                            if sql:
+                                sql_queries.append(sql)
 
-        return str(result)
+            answer = result["messages"][-1].content
 
+            if sql_queries:
+                formatted_sql = "\n\n".join(
+                    f"```sql\n{q.strip()}\n```" for q in sql_queries
+                )
+                return f"{answer}\n\n---\n**Wykonane zapytanie SQL:**\n{formatted_sql}"
+
+        return answer
     except Exception as e:
         return f"Error: {e}"
