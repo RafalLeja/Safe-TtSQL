@@ -12,13 +12,6 @@ def init_db():
                 title TEXT NOT NULL
             )
         """)
-        
-        try:
-            cursor.execute("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass
-
-
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +27,7 @@ def init_db():
 def get_conversations():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title, is_pinned FROM conversations ORDER BY is_pinned DESC, id DESC")
+        cursor.execute("SELECT id, title FROM conversations ORDER BY id DESC")
         return cursor.fetchall()
 
 
@@ -44,20 +37,6 @@ def create_conversation(title):
         cursor.execute("INSERT INTO conversations (title) VALUES (?)", (title,))
         conn.commit()
         return cursor.lastrowid
-
-def toggle_pin_conversation(conv_id):
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE conversations SET is_pinned = 1 - is_pinned WHERE id = ?", (conv_id,))
-        conn.commit()
-
-
-def delete_conversation(conv_id):
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
-        cursor.execute("DELETE FROM conversations WHERE id = ?", (conv_id,))
-        conn.commit()
 
 
 def get_messages(conversation_id) -> list[tuple[str, str]]:
