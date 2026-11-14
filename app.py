@@ -50,7 +50,7 @@ def chat(conv_id):
             save_message(conv_id, user_query, ai_response)
         return redirect(url_for("chat", conv_id=conv_id))
 
-    conversations = get_conversations
+    conversations = get_conversations()
     messages = get_messages(conv_id)
     return render_template("chat.html", conv_id=conv_id, messages=messages, conversations=conversations)
 
