@@ -1,4 +1,3 @@
-from collections.abc import Generator
 from itertools import chain
 from urllib.parse import quote_plus
 
@@ -44,7 +43,7 @@ def run_queries(agent_executor, queries: list[str]):
         try:
             inputs = {"messages": [{"role": "user", "content": query}]}
             for chunk in agent_executor.stream(inputs, stream_mode="messages"):
-                message, metadata = chunk
+                message, _metadata = chunk
                 if isinstance(message, AIMessageChunk):
                     print(message.text, end="", flush=True)
         except Exception as e:
@@ -96,5 +95,6 @@ def ask_agent(
                 return f"{answer}\n\n---\n**Wykonane zapytanie SQL:**\n{formatted_sql}"
 
         return answer
+
     except Exception as e:
         return f"Error: {e}"

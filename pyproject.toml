@@ -11,7 +11,10 @@ dependencies = [
     "langchain-community>=0.4.2",
     "langchain-openai>=1.7.3",
     "langchainhub>=0.1.21",
+    "markdown-it-py>=4.3.0",
+    "nh3>=0.3.7",
     "psycopg[binary]>=3.3.6",
+    "pygments>=2.21.0",
     "python-dotenv>=1.2.4",
     "sqlalchemy>=2.1.6",
 ]
