@@ -1,7 +1,17 @@
+import json
+import time
 from html import escape
 
 import nh3
-from flask import Flask, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    redirect,
+    render_template,
+    request,
+    stream_with_context,
+    url_for,
+)
 from markdown_it import MarkdownIt
 from markupsafe import Markup
 from pygments import highlight as pygments_highlight
@@ -9,7 +19,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 
-from src.agent import ask_agent, create_ai_agent
+from src.agent import ask_agent, ask_agent_stream, create_ai_agent
 from src.db_sqllite import (
     create_conversation,
     delete_conversation,
@@ -100,6 +110,51 @@ def chat(conv_id):
         messages=messages,
         conversations=conversations,
         title=title,
+    )
+
+
+@app.route("/chat/<int:conv_id>/stream", methods=["POST"])
+def chat_stream(conv_id):
+    """SSE endpoint: streams agent answer tokens to the UI.
+
+    The frontend POSTs here with the same form data as /chat/<id>.
+    """
+    user_query = (request.form.get("query") or "").strip()
+    if not user_query:
+        return redirect(url_for("chat", conv_id=conv_id))
+
+    context_messages = get_messages(conv_id)
+
+    def generate():
+        buffer: list[str] = []
+        answer = None
+        last_beat = time.time()
+        try:
+            for event in ask_agent_stream(agent, user_query, context=context_messages):
+                if event.get("type") == "token":
+                    buffer.append(event["text"])
+                elif event.get("type") == "done":
+                    answer = event["answer"]
+                    # Reuse the safe server-side markdown pipeline
+                    # (markdown-it + nh3 + Pygments) for the final render.
+                    event["html"] = str(render_markdown(answer))
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                # Comment-line heartbeat keeps proxies from closing idle
+                # connections during long tool executions.
+                now = time.time()
+                if now - last_beat >= 15:
+                    yield ": keep-alive\n\n"
+                    last_beat = now
+            if answer is None:
+                answer = "".join(buffer)
+            save_message(conv_id, user_query, answer)
+        except Exception as e:  # generator-level safety net
+            yield f"data: {json.dumps({'type': 'error', 'text': f'Error: {e}'}, ensure_ascii=False)}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

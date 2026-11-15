@@ -9,6 +9,34 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='markdown.css') }}"
     />
+    <style>
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background: #818cf8;
+        display: inline-block;
+        animation: typingBounce 1.2s infinite ease-in-out;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes typingBounce {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+    </style>
   </head>
 
   <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
@@ -239,16 +267,179 @@
       const chatForm = document.querySelector('form[action^="/chat/"]');
       if (chatForm) {
         const chatTextarea = chatForm.querySelector('textarea[name="query"]');
-        if (chatTextarea) {
-          chatTextarea.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              if (chatTextarea.value.trim() !== "") {
-                chatForm.submit();
+        const chatButton = chatForm.querySelector('button[type="submit"]');
+        const chatContainer = document.querySelector(
+          "main .flex-1.overflow-y-auto"
+        );
+        const streamUrl = chatForm.action + "/stream";
+
+        let streaming = false;
+
+        const scrollBottom = () => {
+          if (chatContainer)
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+
+        const appendUserBubble = (text) => {
+          const wrap = document.createElement("div");
+          wrap.className =
+            "flex items-start gap-4 max-w-3xl mx-auto w-full justify-end";
+          wrap.innerHTML = `
+            <div class="bg-indigo-600 text-white rounded-2xl px-4 py-3 max-w-xl text-sm shadow-md"></div>
+            <div class="w-8 h-8 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">Ty</div>`;
+          wrap.firstElementChild.textContent = text;
+          chatContainer.appendChild(wrap);
+        };
+
+        const appendAiBubble = () => {
+          const wrap = document.createElement("div");
+          wrap.className = "flex items-start gap-4 max-w-3xl mx-auto w-full";
+          wrap.innerHTML = `
+            <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0 text-indigo-300">AI</div>
+            <div class="bg-gray-800 border border-gray-700/60 text-gray-200 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md space-y-2">
+              <div class="stream-status text-xs text-gray-400 italic flex items-center gap-2">
+                <span class="status-text">Agent myśli</span>
+                <span class="flex items-center gap-1">
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                </span>
+              </div>
+              <div class="stream-content leading-relaxed whitespace-pre-wrap break-words"></div>
+            </div>`;
+          chatContainer.appendChild(wrap);
+          scrollBottom();
+          return {
+            statusEl: wrap.querySelector(".stream-status"),
+            statusText: wrap.querySelector(".status-text"),
+            contentEl: wrap.querySelector(".stream-content"),
+          };
+        };
+
+        const setBusy = (busy) => {
+          chatButton.disabled = busy;
+          chatButton.classList.toggle("opacity-50", busy);
+          chatButton.classList.toggle("cursor-not-allowed", busy);
+          // NOTE: readOnly, not disabled — disabled inputs are excluded
+          // from the form data.
+          chatTextarea.readOnly = busy;
+          chatTextarea.classList.toggle("opacity-60", busy);
+        };
+
+        chatForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (streaming) return;
+          const query = chatTextarea.value.trim();
+          if (!query) return;
+
+          streaming = true;
+          setBusy(true);
+          // Snapshot BEFORE clearing the textarea.
+          const formData = new FormData(chatForm);
+
+          appendUserBubble(query);
+          chatTextarea.value = "";
+          const { statusEl, statusText, contentEl } = appendAiBubble();
+
+          const setStatus = (text) => (statusText.textContent = text);
+
+          try {
+            const response = await fetch(streamUrl, {
+              method: "POST",
+              body: formData,
+            });
+            if (!response.ok || !response.body) {
+              throw new Error("HTTP " + response.status);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let sseBuffer = "";
+            let raw = "";
+            let renderQueued = false;
+            let finished = false;
+
+            // Throttle DOM updates to one per animation frame.
+            const scheduleRender = () => {
+              if (renderQueued) return;
+              renderQueued = true;
+              requestAnimationFrame(() => {
+                renderQueued = false;
+                // textContent is XSS-safe; markdown is rendered by the
+                // server and arrives in the final "done" event.
+                contentEl.textContent = raw;
+                scrollBottom();
+              });
+            };
+
+            const handleEvent = (data) => {
+              switch (data.type) {
+                case "token":
+                  raw += data.text;
+                  scheduleRender();
+                  break;
+                case "status": {
+                  const d = data.detail ? ` — ${data.detail}` : "";
+                  setStatus(`🔧 ${data.tool}${d}`);
+                  break;
+                }
+                case "error":
+                  setStatus("⚠️ " + (data.text || "Błąd"));
+                  break;
+                case "done":
+                  finished = true;
+                  // Swap in the server-rendered, sanitized HTML
+                  // (markdown-it + nh3 + Pygments highlighting).
+                  contentEl.classList.remove("whitespace-pre-wrap");
+                  contentEl.classList.add("md-content");
+                  contentEl.innerHTML = data.html || "";
+                  statusEl.remove();
+                  scrollBottom();
+                  break;
+              }
+            };
+
+            // Parse the SSE stream: blocks separated by \n\n,
+            // lines starting with ":" are heartbeats (ignored).
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              sseBuffer += decoder.decode(value, { stream: true });
+              let idx;
+              while ((idx = sseBuffer.indexOf("\n\n")) !== -1) {
+                const block = sseBuffer.slice(0, idx);
+                sseBuffer = sseBuffer.slice(idx + 2);
+                for (const line of block.split("\n")) {
+                  if (!line.startsWith("data: ")) continue;
+                  try {
+                    handleEvent(JSON.parse(line.slice(6)));
+                  } catch (_) {
+                    /* ignore malformed lines */
+                  }
+                }
               }
             }
-          });
-        }
+
+            // Stream ended without a done event — show what we got.
+            if (!finished && raw) statusEl.remove();
+          } catch (err) {
+            setStatus("⚠️ Błąd połączenia: " + err.message);
+          } finally {
+            streaming = false;
+            setBusy(false);
+            chatTextarea.focus();
+            scrollBottom();
+          }
+        });
+
+        chatTextarea.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (chatTextarea.value.trim() !== "") {
+              chatForm.requestSubmit(); // fires the submit listener (unlike .submit())
+            }
+          }
+        });
       }
     </script>
   </body>
