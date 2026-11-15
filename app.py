@@ -1,7 +1,13 @@
+from html import escape
+
 import nh3
 from flask import Flask, redirect, render_template, request, url_for
 from markdown_it import MarkdownIt
 from markupsafe import Markup
+from pygments import highlight as pygments_highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import get_lexer_by_name
+from pygments.util import ClassNotFound
 
 from src.agent import ask_agent, create_ai_agent
 from src.db_sqllite import (
@@ -17,12 +23,31 @@ from src.db_sqllite import (
 app = Flask(__name__)
 agent = create_ai_agent()
 
-md = MarkdownIt("commonmark").enable("table")
+_pygments_formatter = HtmlFormatter(nowrap=True, noclasses=True, style="github-dark")
+
+
+def _highlight_code(code: str, lang: str, attrs: str) -> str:
+    """Server-side syntax highlighting for fenced code blocks."""
+    try:
+        lexer = get_lexer_by_name(lang or "text")
+    except ClassNotFound:
+        return escape(code)
+    return pygments_highlight(code, lexer, _pygments_formatter)
+
+
+md = MarkdownIt("commonmark", options_update={"highlight": _highlight_code}).enable(
+    "table"
+)
 
 
 def render_markdown(text: str) -> Markup:
     """Convert markdown to sanitized HTML safe to insert into the template."""
-    return Markup(nh3.clean(md.render(text)))
+    return Markup(
+        nh3.clean(
+            md.render(text),
+            attributes={"code": {"class"}, "span": {"style"}},
+        )
+    )
 
 
 @app.route("/", methods=["GET"])
