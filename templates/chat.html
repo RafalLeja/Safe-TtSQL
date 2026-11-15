@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Czat #{{ conv_id }} - Northwind AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style src="./markdown.css"></style>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='markdown.css') }}"
+    />
   </head>
 
   <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
