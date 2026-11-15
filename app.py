@@ -43,6 +43,11 @@ def _conversation_title(query: str) -> str:
     return title
 
 
+def _sse_event(payload) -> str:
+    """Format one payload as an SSE data frame."""
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
 def _sse_response(generator) -> Response:
     return Response(
         stream_with_context(generator),
@@ -66,7 +71,7 @@ def _stream_agent_events(conv_id: int, user_query: str, context_messages: list):
                 # Reuse the safe server-side markdown pipeline
                 # (markdown-it + nh3 + Pygments) for the final render.
                 event["html"] = str(render_markdown(answer))
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            yield _sse_event(event)
             # Comment-line heartbeat keeps proxies from closing idle
             # connections during long tool executions.
             now = time.time()
@@ -77,7 +82,7 @@ def _stream_agent_events(conv_id: int, user_query: str, context_messages: list):
             answer = "".join(buffer)
         save_message(conv_id, user_query, answer)
     except Exception as e:  # generator-level safety net
-        yield f"data: {json.dumps({'type': 'error', 'text': f'Error: {e}'}, ensure_ascii=False)}\n\n"
+        yield _sse_event({"type": "error", "text": f"Error: {e}"})
 
 
 _pygments_formatter = HtmlFormatter(nowrap=True, noclasses=False, style="github-dark")
@@ -140,7 +145,7 @@ def new_chat_stream():
     def generate():
         # Tell the frontend where this conversation lives so it can
         # redirect once the answer is done.
-        yield f"data: {json.dumps({'type': 'start', 'conv_id': conv_id}, ensure_ascii=False)}\n\n"
+        yield _sse_event({"type": "start", "conv_id": conv_id})
         yield from _stream_agent_events(conv_id, user_query, [])
 
     return _sse_response(generate())

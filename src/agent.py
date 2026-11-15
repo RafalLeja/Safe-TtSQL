@@ -142,16 +142,19 @@ def ask_agent_stream(
                     yield {"type": "token", "text": chunk.text}
             elif mode == "updates":
                 # Node finished; surface tool calls as status events.
-                for _node, update in payload.items():
+                for update in payload.values():
                     new_messages = (
                         update.get("messages", []) if isinstance(update, dict) else []
                     )
                     for msg in new_messages:
                         for tc in getattr(msg, "tool_calls", None) or []:
                             sql = tc["args"].get("query")
-                            if tc["name"] == "execute_sql" and sql:
-                                if sql not in sql_queries:
-                                    sql_queries.append(sql)
+                            if (
+                                tc["name"] == "execute_sql"
+                                and sql
+                                and sql not in sql_queries
+                            ):
+                                sql_queries.append(sql)
                             detail = sql or ", ".join(
                                 f"{k}={v}" for k, v in tc["args"].items()
                             )
