@@ -125,12 +125,31 @@
     const form = document.querySelector('form[action="/new_chat"]');
     if (form) {
       const textarea = form.querySelector('textarea[name="query"]');
+      const button = form.querySelector('button[type="submit"]');
+      const buttonLabel = button ? button.querySelector('span') : null;
+
+      form.addEventListener('submit', () => {
+        if (textarea && !textarea.value.trim()) return;
+
+        // Prevent double submit. NOTE: readOnly, not disabled —
+        // disabled inputs are excluded from the form data.
+        if (button) {
+          button.disabled = true;
+          button.classList.add('opacity-70', 'cursor-not-allowed');
+        }
+        if (buttonLabel) buttonLabel.textContent = 'Tworzę czat...';
+        if (textarea) {
+          textarea.readOnly = true;
+          textarea.classList.add('opacity-60');
+        }
+      });
+
       if (textarea) {
         textarea.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             if (textarea.value.trim() !== '') {
-              form.submit();
+              form.requestSubmit(); // fires the submit listener (unlike .submit())
             }
           }
         });

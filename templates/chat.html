@@ -9,6 +9,34 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='markdown.css') }}"
     />
+    <style>
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background: #818cf8;
+        display: inline-block;
+        animation: typingBounce 1.2s infinite ease-in-out;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes typingBounce {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+    </style>
   </head>
 
   <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
@@ -239,12 +267,49 @@
       const chatForm = document.querySelector('form[action^="/chat/"]');
       if (chatForm) {
         const chatTextarea = chatForm.querySelector('textarea[name="query"]');
+        const chatButton = chatForm.querySelector('button[type="submit"]');
+        const chatContainer = document.querySelector(
+          "main .flex-1.overflow-y-auto"
+        );
+
+        chatForm.addEventListener("submit", () => {
+          if (chatTextarea && !chatTextarea.value.trim()) return;
+
+          // Prevent double submit. NOTE: use readOnly, not disabled —
+          // disabled inputs are excluded from the form data.
+          chatButton.disabled = true;
+          chatButton.classList.add("opacity-50", "cursor-not-allowed");
+          if (chatTextarea) {
+            chatTextarea.readOnly = true;
+            chatTextarea.classList.add("opacity-60");
+          }
+
+          // Loading widget (survives until the redirect renders)
+          if (chatContainer) {
+            const wrap = document.createElement("div");
+            wrap.className =
+              "flex items-start gap-4 max-w-3xl mx-auto w-full";
+            wrap.innerHTML = `
+              <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0 text-indigo-300">AI</div>
+              <div class="bg-gray-800 border border-gray-700/60 text-gray-400 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md flex items-center gap-3">
+                <span>Agent myśli</span>
+                <span class="flex items-center gap-1">
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                </span>
+              </div>`;
+            chatContainer.appendChild(wrap);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }
+        });
+
         if (chatTextarea) {
           chatTextarea.addEventListener("keydown", (e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               if (chatTextarea.value.trim() !== "") {
-                chatForm.submit();
+                chatForm.requestSubmit(); // fires the submit listener (unlike .submit())
               }
             }
           });
