@@ -33,6 +33,53 @@ from src.db_sqllite import (
 app = Flask(__name__)
 agent = create_ai_agent()
 
+
+def _conversation_title(query: str) -> str:
+    """Derive a short conversation title from the first words of a query."""
+    words = query.split()
+    title = " ".join(words[:5])
+    if len(words) > 5:
+        title += "..."
+    return title
+
+
+def _sse_response(generator) -> Response:
+    return Response(
+        stream_with_context(generator),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _stream_agent_events(conv_id: int, user_query: str, context_messages: list):
+    """SSE generator shared by /chat/<id>/stream and /new_chat/stream:
+    streams agent events, saves the message on completion."""
+    buffer: list[str] = []
+    answer = None
+    last_beat = time.time()
+    try:
+        for event in ask_agent_stream(agent, user_query, context=context_messages):
+            if event.get("type") == "token":
+                buffer.append(event["text"])
+            elif event.get("type") == "done":
+                answer = event["answer"]
+                # Reuse the safe server-side markdown pipeline
+                # (markdown-it + nh3 + Pygments) for the final render.
+                event["html"] = str(render_markdown(answer))
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            # Comment-line heartbeat keeps proxies from closing idle
+            # connections during long tool executions.
+            now = time.time()
+            if now - last_beat >= 15:
+                yield ": keep-alive\n\n"
+                last_beat = now
+        if answer is None:
+            answer = "".join(buffer)
+        save_message(conv_id, user_query, answer)
+    except Exception as e:  # generator-level safety net
+        yield f"data: {json.dumps({'type': 'error', 'text': f'Error: {e}'}, ensure_ascii=False)}\n\n"
+
+
 _pygments_formatter = HtmlFormatter(nowrap=True, noclasses=False, style="github-dark")
 
 
@@ -72,17 +119,31 @@ def new_chat():
     if not user_query:
         return redirect(url_for("index"))
 
-    words = user_query.split()
-    title = " ".join(words[:5])
-    if len(words) > 5:
-        title += "..."
-
-    conv_id = create_conversation(title)
+    conv_id = create_conversation(_conversation_title(user_query))
 
     ai_response = ask_agent(agent, user_query)
     save_message(conv_id, user_query, ai_response)
 
     return redirect(url_for("chat", conv_id=conv_id))
+
+
+@app.route("/new_chat/stream", methods=["POST"])
+def new_chat_stream():
+    """SSE variant of new_chat: creates the conversation immediately,
+    then streams the first answer."""
+    user_query = (request.form.get("query") or "").strip()
+    if not user_query:
+        return redirect(url_for("index"))
+
+    conv_id = create_conversation(_conversation_title(user_query))
+
+    def generate():
+        # Tell the frontend where this conversation lives so it can
+        # redirect once the answer is done.
+        yield f"data: {json.dumps({'type': 'start', 'conv_id': conv_id}, ensure_ascii=False)}\n\n"
+        yield from _stream_agent_events(conv_id, user_query, [])
+
+    return _sse_response(generate())
 
 
 @app.route("/chat/<int:conv_id>", methods=["GET", "POST"])
@@ -124,38 +185,7 @@ def chat_stream(conv_id):
         return redirect(url_for("chat", conv_id=conv_id))
 
     context_messages = get_messages(conv_id)
-
-    def generate():
-        buffer: list[str] = []
-        answer = None
-        last_beat = time.time()
-        try:
-            for event in ask_agent_stream(agent, user_query, context=context_messages):
-                if event.get("type") == "token":
-                    buffer.append(event["text"])
-                elif event.get("type") == "done":
-                    answer = event["answer"]
-                    # Reuse the safe server-side markdown pipeline
-                    # (markdown-it + nh3 + Pygments) for the final render.
-                    event["html"] = str(render_markdown(answer))
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                # Comment-line heartbeat keeps proxies from closing idle
-                # connections during long tool executions.
-                now = time.time()
-                if now - last_beat >= 15:
-                    yield ": keep-alive\n\n"
-                    last_beat = now
-            if answer is None:
-                answer = "".join(buffer)
-            save_message(conv_id, user_query, answer)
-        except Exception as e:  # generator-level safety net
-            yield f"data: {json.dumps({'type': 'error', 'text': f'Error: {e}'}, ensure_ascii=False)}\n\n"
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    return _sse_response(_stream_agent_events(conv_id, user_query, context_messages))
 
 
 @app.route("/pin/<int:conv_id>", methods=["POST"])
