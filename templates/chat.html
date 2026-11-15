@@ -1,202 +1,252 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Czat #{{ conv_id }} - Northwind AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style src="./markdown.css"></style>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Czat #{{ conv_id }} - Northwind AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Styles for rendered markdown (Tailwind Preflight resets default element styles) */
-    .md-content > *:first-child { margin-top: 0; }
-    .md-content > *:last-child { margin-bottom: 0; }
-    .md-content p { margin: 0.5rem 0; }
-    .md-content h1, .md-content h2, .md-content h3, .md-content h4 {
-      font-weight: 600; line-height: 1.3; margin: 1rem 0 0.5rem;
-    }
-    .md-content h1 { font-size: 1.25rem; }
-    .md-content h2 { font-size: 1.125rem; }
-    .md-content h3 { font-size: 1rem; }
-    .md-content ul { list-style: disc; }
-    .md-content ol { list-style: decimal; }
-    .md-content ul, .md-content ol { margin: 0.5rem 0; padding-left: 1.25rem; }
-    .md-content li { margin: 0.25rem 0; }
-    .md-content a { color: #818cf8; text-decoration: underline; }
-    .md-content strong { font-weight: 600; }
-    .md-content hr { border-color: #374151; margin: 1rem 0; }
-    .md-content blockquote {
-      border-left: 3px solid #4b5563; padding-left: 0.75rem;
-      color: #9ca3af; margin: 0.5rem 0;
-    }
-    .md-content code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      background: #1f2937; padding: 0.1rem 0.35rem;
-      border-radius: 0.25rem; font-size: 0.85em;
-    }
-    .md-content pre {
-      background: #111827; border: 1px solid #374151;
-      border-radius: 0.5rem; padding: 0.75rem 1rem;
-      overflow-x: auto; margin: 0.5rem 0;
-    }
-    .md-content pre code { background: transparent; padding: 0; font-size: 0.8rem; }
-    .md-content table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8rem; }
-    .md-content th, .md-content td { border: 1px solid #374151; padding: 0.4rem 0.6rem; text-align: left; }
-    .md-content th { background: #1f2937; font-weight: 600; }
-  </style>
-</head>
+  <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
+    <aside class="w-72 bg-gray-950 flex flex-col border-r border-gray-800">
+      <div
+        class="p-4 border-b border-gray-800 flex items-center justify-between"
+      >
+        <a
+          href="/"
+          class="font-bold text-lg tracking-wide hover:text-indigo-400 transition"
+          >Northwind AI</a
+        >
+      </div>
 
-<body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
+      <div class="p-3">
+        <a
+          href="/"
+          class="flex items-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-medium transition shadow-sm text-sm"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Nowa rozmowa
+        </a>
+      </div>
 
-  <aside class="w-72 bg-gray-950 flex flex-col border-r border-gray-800">
-    <div class="p-4 border-b border-gray-800 flex items-center justify-between">
-      <a href="/" class="font-bold text-lg tracking-wide hover:text-indigo-400 transition">Northwind AI</a>
-    </div>
+      <div class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+        {% set pinned = conversations | selectattr(2, 'equalto', 1) | list %} {%
+        set unpinned = conversations | selectattr(2, 'equalto', 0) | list %}
 
-    <div class="p-3">
-      <a href="/"
-        class="flex items-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-medium transition shadow-sm text-sm">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Nowa rozmowa
-      </a>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-      {% set pinned = conversations | selectattr(2, 'equalto', 1) | list %}
-      {% set unpinned = conversations | selectattr(2, 'equalto', 0) | list %}
-
-      <!-- Przypięte -->
-      {% if pinned %}
-      <div>
-        <div
-          class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider px-3 mb-1.5 flex items-center gap-1">
-          <span>★ Przypięte</span>
-        </div>
-        <div class="space-y-1">
-          {% for c_id, item_title, is_pinned in pinned %}
+        <!-- Przypięte -->
+        {% if pinned %}
+        <div>
           <div
-            class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}">
-            <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm truncate pr-16">
-              {{ item_title }}
-            </a>
-            <div
-              class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
-              <form action="/pin/{{ c_id }}" method="POST" class="inline">
-                <button type="submit" title="Odepnij" class="p-1 text-amber-400 rounded">
-                  ★
-                </button>
-              </form>
-              <form action="/delete/{{ c_id }}" method="POST" class="inline"
-                onsubmit="return confirm('Usunąć tę rozmowę?');">
-                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
-                  🗑
-                </button>
-              </form>
-            </div>
+            class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider px-3 mb-1.5 flex items-center gap-1"
+          >
+            <span>★ Przypięte</span>
           </div>
-          {% endfor %}
+          <div class="space-y-1">
+            {% for c_id, item_title, is_pinned in pinned %}
+            <div
+              class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}"
+            >
+              <a
+                href="/chat/{{ c_id }}"
+                class="flex-1 px-3 py-2 text-sm truncate pr-16"
+              >
+                {{ item_title }}
+              </a>
+              <div
+                class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded"
+              >
+                <form action="/pin/{{ c_id }}" method="POST" class="inline">
+                  <button
+                    type="submit"
+                    title="Odepnij"
+                    class="p-1 text-amber-400 rounded"
+                  >
+                    ★
+                  </button>
+                </form>
+                <form
+                  action="/delete/{{ c_id }}"
+                  method="POST"
+                  class="inline"
+                  onsubmit="return confirm('Usunąć tę rozmowę?');"
+                >
+                  <button
+                    type="submit"
+                    title="Usuń"
+                    class="p-1 text-gray-400 hover:text-red-400 rounded"
+                  >
+                    🗑
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Historia -->
+        <div>
+          <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">
+            Historia rozmów
+          </div>
+          {% if unpinned %}
+          <div class="space-y-1">
+            {% for c_id, item_title, is_pinned in unpinned %}
+            <div
+              class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}"
+            >
+              <a
+                href="/chat/{{ c_id }}"
+                class="flex-1 px-3 py-2 text-sm truncate pr-16"
+              >
+                {{ item_title }}
+              </a>
+              <div
+                class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded"
+              >
+                <form action="/pin/{{ c_id }}" method="POST" class="inline">
+                  <button
+                    type="submit"
+                    title="Przypnij"
+                    class="p-1 text-gray-400 hover:text-amber-400 rounded"
+                  >
+                    ☆
+                  </button>
+                </form>
+                <form
+                  action="/delete/{{ c_id }}"
+                  method="POST"
+                  class="inline"
+                  onsubmit="return confirm('Usunąć tę rozmowę?');"
+                >
+                  <button
+                    type="submit"
+                    title="Usuń"
+                    class="p-1 text-gray-400 hover:text-red-400 rounded"
+                  >
+                    🗑
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% elif not pinned %}
+          <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+          {% endif %}
         </div>
       </div>
-      {% endif %}
+    </aside>
 
-      <!-- Historia -->
-      <div>
-        <div class="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Historia rozmów</div>
-        {% if unpinned %}
-        <div class="space-y-1">
-          {% for c_id, item_title, is_pinned in unpinned %}
+    <main class="flex-1 flex flex-col h-full bg-gray-900">
+      <header
+        class="h-14 border-b border-gray-800 flex items-center px-6 bg-gray-900/50 backdrop-blur"
+      >
+        <span class="text-sm font-medium text-gray-300">{{ title }}</span>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        {% if messages %} {% for prompt, response in messages %}
+        <div
+          class="flex items-start gap-4 max-w-3xl mx-auto w-full justify-end"
+        >
           <div
-            class="group relative flex items-center rounded-lg transition {{ 'bg-gray-800 text-white font-medium' if c_id == conv_id else 'hover:bg-gray-800 text-gray-300' }}">
-            <a href="/chat/{{ c_id }}" class="flex-1 px-3 py-2 text-sm truncate pr-16">
-              {{ item_title }}
-            </a>
-            <div
-              class="absolute right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 pl-1 rounded">
-              <form action="/pin/{{ c_id }}" method="POST" class="inline">
-                <button type="submit" title="Przypnij" class="p-1 text-gray-400 hover:text-amber-400 rounded">
-                  ☆
-                </button>
-              </form>
-              <form action="/delete/{{ c_id }}" method="POST" class="inline"
-                onsubmit="return confirm('Usunąć tę rozmowę?');">
-                <button type="submit" title="Usuń" class="p-1 text-gray-400 hover:text-red-400 rounded">
-                  🗑
-                </button>
-              </form>
-            </div>
+            class="bg-indigo-600 text-white rounded-2xl px-4 py-3 max-w-xl text-sm shadow-md"
+          >
+            {{ prompt }}
           </div>
-          {% endfor %}
+          <div
+            class="w-8 h-8 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold shrink-0"
+          >
+            Ty
+          </div>
         </div>
-        {% elif not pinned %}
-        <p class="text-xs text-gray-500 px-3">Brak historii rozmów.</p>
+
+        <div class="flex items-start gap-4 max-w-3xl mx-auto w-full">
+          <div
+            class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0 text-indigo-300"
+          >
+            AI
+          </div>
+          <div
+            class="bg-gray-800 border border-gray-700/60 text-gray-200 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md space-y-2"
+          >
+            <div class="md-content leading-relaxed">{{ response }}</div>
+          </div>
+        </div>
+        {% endfor %} {% else %}
+        <div class="text-center text-gray-500 my-auto">
+          Ta rozmowa jest pusta. Napisz coś poniżej.
+        </div>
         {% endif %}
       </div>
-    </div>
-  </aside>
 
-  <main class="flex-1 flex flex-col h-full bg-gray-900">
-    <header class="h-14 border-b border-gray-800 flex items-center px-6 bg-gray-900/50 backdrop-blur">
-      <span class="text-sm font-medium text-gray-300">{{ title }}</span>
-    </header>
-
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      {% if messages %}
-      {% for prompt, response in messages %}
-      <div class="flex items-start gap-4 max-w-3xl mx-auto w-full justify-end">
-        <div class="bg-indigo-600 text-white rounded-2xl px-4 py-3 max-w-xl text-sm shadow-md">
-          {{ prompt }}
-        </div>
-        <div class="w-8 h-8 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">Ty
-        </div>
+      <div class="p-4 bg-gray-900 border-t border-gray-800">
+        <form
+          action="/chat/{{ conv_id }}"
+          method="POST"
+          class="max-w-3xl mx-auto relative flex items-center"
+        >
+          <textarea
+            name="query"
+            rows="1"
+            required
+            placeholder="Napisz wiadomość do agenta..."
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-4 pr-12 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm shadow-inner"
+          ></textarea>
+          <button
+            type="submit"
+            class="absolute right-3 bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition shadow"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 12h14M12 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </form>
       </div>
+    </main>
 
-      <div class="flex items-start gap-4 max-w-3xl mx-auto w-full">
-        <div
-          class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0 text-indigo-300">
-          AI</div>
-        <div
-          class="bg-gray-800 border border-gray-700/60 text-gray-200 rounded-2xl px-5 py-4 max-w-2xl text-sm shadow-md space-y-2">
-
-          <div class="md-content leading-relaxed">{{ response }}</div>
-        </div>
-      </div>
-      {% endfor %}
-      {% else %}
-      <div class="text-center text-gray-500 my-auto">Ta rozmowa jest pusta. Napisz coś poniżej.</div>
-      {% endif %}
-    </div>
-
-    <div class="p-4 bg-gray-900 border-t border-gray-800">
-      <form action="/chat/{{ conv_id }}" method="POST" class="max-w-3xl mx-auto relative flex items-center">
-        <textarea name="query" rows="1" required placeholder="Napisz wiadomość do agenta..."
-          class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-4 pr-12 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm shadow-inner"></textarea>
-        <button type="submit"
-          class="absolute right-3 bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition shadow">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </form>
-    </div>
-  </main>
-
-  <script>
-    const chatForm = document.querySelector('form[action^="/chat/"]');
-    if (chatForm) {
-      const chatTextarea = chatForm.querySelector('textarea[name="query"]');
-      if (chatTextarea) {
-        chatTextarea.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (chatTextarea.value.trim() !== '') {
-              chatForm.submit();
+    <script>
+      const chatForm = document.querySelector('form[action^="/chat/"]');
+      if (chatForm) {
+        const chatTextarea = chatForm.querySelector('textarea[name="query"]');
+        if (chatTextarea) {
+          chatTextarea.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (chatTextarea.value.trim() !== "") {
+                chatForm.submit();
+              }
             }
-          }
-        });
+          });
+        }
       }
-    }
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>

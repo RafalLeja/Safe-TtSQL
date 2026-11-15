@@ -23,7 +23,7 @@ from src.db_sqllite import (
 app = Flask(__name__)
 agent = create_ai_agent()
 
-_pygments_formatter = HtmlFormatter(nowrap=True, noclasses=True, style="github-dark")
+_pygments_formatter = HtmlFormatter(nowrap=True, noclasses=False, style="github-dark")
 
 
 def _highlight_code(code: str, lang: str, attrs: str) -> str:
@@ -45,7 +45,7 @@ def render_markdown(text: str) -> Markup:
     return Markup(
         nh3.clean(
             md.render(text),
-            attributes={"code": {"class"}, "span": {"style"}},
+            attributes={"code": {"class"}, "span": {"class"}},
         )
     )
 
