@@ -17,7 +17,7 @@ from src.db_sqllite import (
 app = Flask(__name__)
 agent = create_ai_agent()
 
-md = MarkdownIt("commonmark")
+md = MarkdownIt("commonmark").enable("table")
 
 
 def render_markdown(text: str) -> Markup:
