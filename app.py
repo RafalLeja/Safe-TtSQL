@@ -1,18 +1,28 @@
+import nh3
 from flask import Flask, redirect, render_template, request, url_for
+from markdown_it import MarkdownIt
+from markupsafe import Markup
 
 from src.agent import ask_agent, create_ai_agent
 from src.db_sqllite import (
     create_conversation,
-    toggle_pin_conversation,
     delete_conversation,
     get_conversations,
     get_messages,
     init_db,
     save_message,
+    toggle_pin_conversation,
 )
 
 app = Flask(__name__)
 agent = create_ai_agent()
+
+md = MarkdownIt("commonmark")
+
+
+def render_markdown(text: str) -> Markup:
+    """Convert markdown to sanitized HTML safe to insert into the template."""
+    return Markup(nh3.clean(md.render(text)))
 
 
 @app.route("/", methods=["GET"])
@@ -51,9 +61,22 @@ def chat(conv_id):
         return redirect(url_for("chat", conv_id=conv_id))
 
     conversations = get_conversations()
-    messages = get_messages(conv_id)
-    title = next((row[1] for row in conversations if row[0] == conv_id), f"Konwersacja #{conv_id}")
-    return render_template("chat.html", conv_id=conv_id, messages=messages, conversations=conversations, title=title)
+    messages = [
+        (prompt, render_markdown(response))
+        for prompt, response in get_messages(conv_id)
+    ]
+    title = next(
+        (row[1] for row in conversations if row[0] == conv_id),
+        f"Konwersacja #{conv_id}",
+    )
+    return render_template(
+        "chat.html",
+        conv_id=conv_id,
+        messages=messages,
+        conversations=conversations,
+        title=title,
+    )
+
 
 @app.route("/pin/<int:conv_id>", methods=["POST"])
 def pin_chat(conv_id):
@@ -67,8 +90,6 @@ def delete_chat(conv_id):
     if request.referrer and f"/chat/{conv_id}" in request.referrer:
         return redirect(url_for("index"))
     return redirect(request.referrer or url_for("index"))
-    
-
 
 
 if __name__ == "__main__":
