@@ -9,6 +9,32 @@
  *   getRedirectUrl, // optional ({convId, answer}) => URL to navigate to after "done"
  * })
  */
+// Read an SSE response body, calling onEvent with each parsed
+// "data: ..." payload. Comment lines (": keep-alive") are ignored.
+async function readSseEvents(body, onEvent) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) return;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      for (const line of block.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          onEvent(JSON.parse(line.slice(6)));
+        } catch (_) {
+          /* ignore malformed lines */
+        }
+      }
+    }
+  }
+}
+
 function createStreamChat({ form, streamUrl, getContainer, getRedirectUrl }) {
   if (!form) return;
 
@@ -68,6 +94,69 @@ function createStreamChat({ form, streamUrl, getContainer, getRedirectUrl }) {
     textarea.classList.toggle("opacity-60", busy);
   };
 
+  // Fetch the stream and apply its events to the AI bubble appended by
+  // the caller. Returns a redirect URL for the new-chat flow, or null.
+  const streamAnswer = async (formData, { statusEl, statusText, contentEl }) => {
+    const setStatus = (text) => (statusText.textContent = text);
+    let raw = "";
+    let convId = null;
+    let finished = false;
+    let renderQueued = false;
+    let redirectUrl = null;
+
+    // Throttle DOM updates to one per animation frame.
+    const scheduleRender = () => {
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(() => {
+        renderQueued = false;
+        // textContent is XSS-safe; markdown is rendered by the
+        // server and arrives in the final "done" event.
+        contentEl.textContent = raw;
+        scrollBottom();
+      });
+    };
+
+    const handleEvent = (data) => {
+      switch (data.type) {
+        case "start":
+          convId = data.conv_id;
+          break;
+        case "token":
+          raw += data.text;
+          scheduleRender();
+          break;
+        case "status": {
+          const d = data.detail ? ` — ${data.detail}` : "";
+          setStatus(`🔧 ${data.tool}${d}`);
+          break;
+        }
+        case "error":
+          setStatus("⚠️ " + (data.text || "Błąd"));
+          break;
+        case "done":
+          finished = true;
+          // Swap in the server-rendered, sanitized HTML
+          contentEl.classList.replace("whitespace-pre-wrap", "md-content");
+          contentEl.innerHTML = data.html || "";
+          statusEl.remove();
+          scrollBottom();
+          redirectUrl = getRedirectUrl?.({ convId, answer: data.answer });
+          break;
+      }
+    };
+
+    const response = await fetch(streamUrl, { method: "POST", body: formData });
+    if (!response.ok || !response.body) {
+      throw new Error("HTTP " + response.status);
+    }
+    await readSseEvents(response.body, handleEvent);
+
+    // Stream ended without a done event — show what we got.
+    if (!finished && raw) statusEl.remove();
+    return redirectUrl;
+  };
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (streaming) return;
@@ -83,96 +172,11 @@ function createStreamChat({ form, streamUrl, getContainer, getRedirectUrl }) {
     appendUserBubble(query);
     textarea.value = "";
     const { statusEl, statusText, contentEl } = appendAiBubble();
-
     const setStatus = (text) => (statusText.textContent = text);
+
     let redirectUrl = null;
-
     try {
-      const response = await fetch(streamUrl, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok || !response.body) {
-        throw new Error("HTTP " + response.status);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let sseBuffer = "";
-      let raw = "";
-      let renderQueued = false;
-      let finished = false;
-      let convId = null;
-
-      // Throttle DOM updates to one per animation frame.
-      const scheduleRender = () => {
-        if (renderQueued) return;
-        renderQueued = true;
-        requestAnimationFrame(() => {
-          renderQueued = false;
-          // textContent is XSS-safe; markdown is rendered by the
-          // server and arrives in the final "done" event.
-          contentEl.textContent = raw;
-          scrollBottom();
-        });
-      };
-
-      const handleEvent = (data) => {
-        switch (data.type) {
-          case "start":
-            convId = data.conv_id;
-            break;
-          case "token":
-            raw += data.text;
-            scheduleRender();
-            break;
-          case "status": {
-            const d = data.detail ? ` — ${data.detail}` : "";
-            setStatus(`🔧 ${data.tool}${d}`);
-            break;
-          }
-          case "error":
-            setStatus("⚠️ " + (data.text || "Błąd"));
-            break;
-          case "done":
-            finished = true;
-            // Swap in the server-rendered, sanitized HTML
-            // (markdown-it + nh3 + Pygments highlighting).
-            contentEl.classList.remove("whitespace-pre-wrap");
-            contentEl.classList.add("md-content");
-            contentEl.innerHTML = data.html || "";
-            statusEl.remove();
-            scrollBottom();
-            if (getRedirectUrl) {
-              redirectUrl = getRedirectUrl({ convId, answer: data.answer });
-            }
-            break;
-        }
-      };
-
-      // Parse the SSE stream: blocks separated by \n\n,
-      // lines starting with ":" are heartbeats (ignored).
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = sseBuffer.indexOf("\n\n")) !== -1) {
-          const block = sseBuffer.slice(0, idx);
-          sseBuffer = sseBuffer.slice(idx + 2);
-          for (const line of block.split("\n")) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              handleEvent(JSON.parse(line.slice(6)));
-            } catch (_) {
-              /* ignore malformed lines */
-            }
-          }
-        }
-      }
-
-      // Stream ended without a done event — show what we got.
-      if (!finished && raw) statusEl.remove();
+      redirectUrl = await streamAnswer(formData, { statusEl, statusText, contentEl });
     } catch (err) {
       setStatus("⚠️ Błąd połączenia: " + err.message);
     } finally {
@@ -193,7 +197,7 @@ function createStreamChat({ form, streamUrl, getContainer, getRedirectUrl }) {
   textarea.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (textarea.value.trim() !== "") {
+      if (textarea.value.trim()) {
         form.requestSubmit(); // fires the submit listener (unlike .submit())
       }
     }
