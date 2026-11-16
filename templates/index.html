@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nowa rozmowa - Northwind AI Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='markdown.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='stream-chat.css') }}">
 </head>
 
 <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
@@ -121,20 +123,29 @@
     </div>
   </main>
 
+  <script src="{{ url_for('static', filename='stream-chat.js') }}"></script>
   <script>
-    const form = document.querySelector('form[action="/new_chat"]');
-    if (form) {
-      const textarea = form.querySelector('textarea[name="query"]');
-      if (textarea) {
-        textarea.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (textarea.value.trim() !== '') {
-              form.submit();
-            }
+    const newForm = document.querySelector('form[action="/new_chat"]');
+    if (newForm) {
+      let streamContainer = null;
+      createStreamChat({
+        form: newForm,
+        streamUrl: "/new_chat/stream",
+        getContainer: () => {
+          // First submit: hide the hero and build a chat area in its place.
+          if (!streamContainer) {
+            const hero = document.querySelector("main .max-w-xl");
+            if (hero) hero.classList.add("hidden");
+            streamContainer = document.createElement("div");
+            streamContainer.className =
+              "w-full flex-1 overflow-y-auto p-6 space-y-6";
+            document.querySelector("main").appendChild(streamContainer);
           }
-        });
-      }
+          return streamContainer;
+        },
+        getRedirectUrl: ({ convId }) =>
+          convId != null ? `/chat/${convId}` : null,
+      });
     }
   </script>
 </body>

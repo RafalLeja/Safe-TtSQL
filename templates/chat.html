@@ -9,6 +9,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='markdown.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='stream-chat.css') }}"
+    />
   </head>
 
   <body class="bg-gray-900 text-gray-100 flex h-screen overflow-hidden">
@@ -235,20 +239,16 @@
       </div>
     </main>
 
+    <script src="{{ url_for('static', filename='stream-chat.js') }}"></script>
     <script>
       const chatForm = document.querySelector('form[action^="/chat/"]');
       if (chatForm) {
-        const chatTextarea = chatForm.querySelector('textarea[name="query"]');
-        if (chatTextarea) {
-          chatTextarea.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              if (chatTextarea.value.trim() !== "") {
-                chatForm.submit();
-              }
-            }
-          });
-        }
+        createStreamChat({
+          form: chatForm,
+          streamUrl: chatForm.action + "/stream",
+          getContainer: () =>
+            document.querySelector("main .flex-1.overflow-y-auto"),
+        });
       }
     </script>
   </body>
