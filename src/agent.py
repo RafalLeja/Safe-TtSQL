@@ -104,6 +104,27 @@ def ask_agent(
         return f"Error: {e}"
 
 
+def _update_messages(update) -> list:
+    """Messages produced by a finished node, per LangGraph updates mode."""
+    if isinstance(update, dict):
+        return update.get("messages", [])
+    return []
+
+
+def _status_event(tool_call: dict, sql_queries: list[str]) -> dict:
+    """Build a status event for a finished tool call, recording any
+    executed SQL query along the way (deduplicated)."""
+    sql = tool_call["args"].get("query")
+    if tool_call["name"] == "execute_sql" and sql and sql not in sql_queries:
+        sql_queries.append(sql)
+    detail = sql or ", ".join(f"{k}={v}" for k, v in tool_call["args"].items())
+    return {
+        "type": "status",
+        "tool": tool_call["name"],
+        "detail": str(detail)[:200],
+    }
+
+
 def ask_agent_stream(
     agent_executor, query: str, context: list[tuple[str, str]] | None = None
 ) -> Iterator[dict]:
@@ -143,32 +164,15 @@ def ask_agent_stream(
             elif mode == "updates":
                 # Node finished; surface tool calls as status events.
                 for update in payload.values():
-                    new_messages = (
-                        update.get("messages", []) if isinstance(update, dict) else []
-                    )
-                    for msg in new_messages:
+                    for msg in _update_messages(update):
                         for tc in getattr(msg, "tool_calls", None) or []:
-                            sql = tc["args"].get("query")
-                            if (
-                                tc["name"] == "execute_sql"
-                                and sql
-                                and sql not in sql_queries
-                            ):
-                                sql_queries.append(sql)
-                            detail = sql or ", ".join(
-                                f"{k}={v}" for k, v in tc["args"].items()
-                            )
-                            yield {
-                                "type": "status",
-                                "tool": tc["name"],
-                                "detail": str(detail)[:200],
-                            }
+                            yield _status_event(tc, sql_queries)
     except Exception as e:
         yield {"type": "error", "text": f"Error: {e}"}
         return
 
     final_text = next(
-        ("".join(group) for group in reversed(token_groups) if "".join(group)),
+        (text for group in reversed(token_groups) if (text := "".join(group))),
         "",
     )
     yield {"type": "done", "answer": _format_answer(final_text, sql_queries)}
